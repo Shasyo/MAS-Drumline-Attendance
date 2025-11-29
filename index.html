@@ -19,6 +19,7 @@ button {
 <h2>MAS Drumline Attendance</h2>
 
 <input id="fullname" placeholder="Full Name" />
+<input id="idNumber" placeholder="ID#" />
 
 <select id="team">
   <option value="">Select Team</option>
@@ -34,35 +35,38 @@ button {
 <p id="status"></p>
 
 <script>
-const API_URL = "https://script.google.com/macros/s/AKfycbwF8J60eC2Mxni_3g_gCfbGYqscEDPANq2jtCCrl9RI8f5NDj9ejlu8H4zVcw2g68zACA/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbzo8xu_5bmBcZjAUv5arV8wMHK08Sp5NlKRwMOQqrQqOPmMHf_w8aLDdg9lNHOGOvvseA/exec";
 
-// Generate a simple device fingerprint
+// Generate device fingerprint
 const deviceID = btoa(
   navigator.userAgent + screen.width + screen.height + navigator.language
 );
 
 function checkIn() {
   const fullName = document.getElementById("fullname").value;
+  const idNumber = document.getElementById("idNumber").value;
   const team = document.getElementById("team").value;
 
-  if (!fullName || !team) {
+  if (!fullName || !team || !idNumber) {
     alert("Please fill all fields.");
     return;
   }
 
-  // Get GPS location
+  // Get geolocation
   navigator.geolocation.getCurrentPosition(pos => {
     const lat = pos.coords.latitude;
     const lng = pos.coords.longitude;
 
     fetch(API_URL, {
       method: "POST",
-      body: JSON.stringify({ fullName, team, deviceID, lat, lng })
+      body: JSON.stringify({ fullName, team, idNumber, deviceID, lat, lng })
     })
     .then(res => res.text())
     .then(msg => {
       if (msg === "OK") {
         document.getElementById("status").innerHTML = "✅ Check-in successful";
+      } else if (msg === "ID_EXISTS") {
+        document.getElementById("status").innerHTML = "❌ This ID# already checked in.";
       } else if (msg === "DEVICE_EXISTS") {
         document.getElementById("status").innerHTML = "❌ This device already checked in.";
       } else if (msg === "OUT_OF_RANGE") {
@@ -79,5 +83,3 @@ function checkIn() {
 
 </body>
 </html>
-
-
