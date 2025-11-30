@@ -5,36 +5,22 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MAS Drumline Attendance</title>
 <style>
-  body { font-family: Arial, sans-serif; padding:20px; margin:0; background:#f5f5f5; display:flex; flex-direction:column; align-items:center; }
+  body { font-family: Arial, sans-serif; padding: 20px; margin:0; background:#f5f5f5; display:flex; flex-direction:column; align-items:center;}
   h2 { text-align:center; margin-bottom:20px; }
   .input-group { width:100%; max-width:400px; margin-bottom:15px; }
-  input, select, button { font-size:16px; width:100%; padding:10px; margin-top:5px; border-radius:8px; border:1px solid #ccc; box-sizing:border-box; }
-  button { background:#000; color:white; cursor:pointer; border:none; margin-top:10px; }
+  input, select, button { font-size:18px; width:100%; padding:12px 10px; margin-top:5px; border-radius:8px; border:1px solid #ccc; box-sizing:border-box;}
+  button { background:#000; color:white; border:none; cursor:pointer; margin-top:10px;}
   button:active { background:#333; }
-  #status { margin-top:20px; font-size:18px; text-align:center; }
-  table { border-collapse: collapse; width:100%; margin-top:20px; }
-  th, td { border:1px solid #ccc; padding:8px; text-align:center; }
-  th { background:#eee; }
-  #adminPanel { display:none; width:100%; max-width:600px; margin-top:30px; }
-  #filters { display:none; margin-top:20px; }
-  #downloadBtn { margin-top:10px; background:#000; color:white; padding:10px; border-radius:5px; }
-  @media (max-width:480px) {
-    input, select, button { font-size:14px; padding:8px; }
-    #status { font-size:16px; }
-  }
+  #status { margin-top:20px; font-size:18px; text-align:center;}
+  @media(max-width:480px){ body{padding:15px;} input,select,button{font-size:16px;padding:10px 8px;} #status{font-size:16px;} }
 </style>
 </head>
 <body>
 
 <h2>MAS Drumline Attendance</h2>
 
-<!-- Attendee Check-in -->
-<div class="input-group">
-  <input id="fullname" placeholder="Full Name" />
-</div>
-<div class="input-group">
-  <input id="idNumber" placeholder="ID#" />
-</div>
+<div class="input-group"><input id="fullname" placeholder="Full Name" /></div>
+<div class="input-group"><input id="idNumber" placeholder="ID#" /></div>
 <div class="input-group">
   <select id="team">
     <option value="">Select Team</option>
@@ -45,64 +31,17 @@
     <option>Morasha7 Gawala</option>
   </select>
 </div>
-<div class="input-group">
-  <button onclick="checkIn()">Check In</button>
-</div>
+
+<div class="input-group"><button onclick="checkIn()">Check In</button></div>
 <p id="status"></p>
 
-<!-- Admin Sign-In Button -->
-<div style="margin-top:20px; text-align:center;">
-  <button onclick="showAdminLogin()" style="background:#555; color:white; font-size:14px; padding:8px 12px; border-radius:5px;">Admin Sign In</button>
-</div>
-
-<!-- Admin Panel -->
-<div id="adminPanel">
-  <div class="input-group">
-    <input type="password" id="adminPassword" placeholder="Enter Admin Password" />
-    <button onclick="loginAdmin()">Login</button>
-  </div>
-
-  <div id="filters">
-    <label>Date:</label>
-    <input type="date" id="filterDate" onchange="loadAttendees()" />
-
-    <label>ID#:</label>
-    <input type="text" id="filterID" placeholder="ID#" oninput="loadAttendees()" />
-
-    <label>Team:</label>
-    <select id="filterTeam" onchange="loadAttendees()">
-      <option value="">All Teams</option>
-      <option>Ashbal</option>
-      <option>Zahrat</option>
-      <option>Morshedat</option>
-      <option>Kashafeen</option>
-      <option>Morasha7 Gawala</option>
-    </select>
-
-    <button id="downloadBtn" onclick="downloadCSV()">Download CSV</button>
-
-    <table id="attendeesTable">
-      <thead>
-        <tr>
-          <th>Timestamp</th>
-          <th>Name</th>
-          <th>Team</th>
-          <th>ID#</th>
-          <th>Device</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </div>
-</div>
-
 <script>
-const API_URL = "https://script.google.com/macros/s/AKfycbyrt1I0YLM2tqULhP-t8sTMy6KlpzFIwgyxDUDNM9X9Ga37mSnVK0OYxL81yQbdng7jyg/exec";
+const API_URL = "https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec";
 
-// Generate device fingerprint
-const deviceID = btoa(navigator.userAgent + screen.width + screen.height + navigator.language);
+// Persistent deviceID
+let deviceID = localStorage.getItem("deviceID");
+if (!deviceID) { deviceID = crypto.randomUUID(); localStorage.setItem("deviceID", deviceID); }
 
-// Check-in function
 function checkIn() {
   const fullName = document.getElementById("fullname").value;
   const idNumber = document.getElementById("idNumber").value;
@@ -110,76 +49,20 @@ function checkIn() {
 
   if(!fullName || !team || !idNumber){ alert("Please fill all fields."); return; }
 
-  navigator.geolocation.getCurrentPosition(pos => {
-    const lat = pos.coords.latitude;
-    const lng = pos.coords.longitude;
+  navigator.geolocation.getCurrentPosition(pos=>{
+    const lat=pos.coords.latitude;
+    const lng=pos.coords.longitude;
 
-    fetch(API_URL, {
-      method:"POST",
-      body: JSON.stringify({ fullName, team, idNumber, deviceID, lat, lng })
-    }).then(res => res.text()).then(msg => {
-      if(msg==="OK") document.getElementById("status").innerHTML = "✅ Check-in successful";
-      else if(msg==="ID_EXISTS") document.getElementById("status").innerHTML = "❌ This ID# already checked in today.";
-      else if(msg==="DEVICE_EXISTS") document.getElementById("status").innerHTML = "❌ This device already checked in today.";
-      else if(msg==="OUT_OF_RANGE") document.getElementById("status").innerHTML = "❌ You are not at the event location.";
-      else document.getElementById("status").innerHTML = "⚠ Something went wrong.";
+    fetch(API_URL,{ method:"POST", body:JSON.stringify({ fullName, team, idNumber, deviceID, lat, lng })})
+    .then(res=>res.text())
+    .then(msg=>{
+      if(msg==="OK"){ document.getElementById("status").innerHTML="✅ Check-in successful"; }
+      else if(msg==="ID_EXISTS"){ document.getElementById("status").innerHTML="❌ This ID# already checked in today."; }
+      else if(msg==="DEVICE_EXISTS"){ document.getElementById("status").innerHTML="❌ This device already checked in today."; }
+      else if(msg==="OUT_OF_RANGE"){ document.getElementById("status").innerHTML="❌ You are not at the event location."; }
+      else{ document.getElementById("status").innerHTML="⚠ Something went wrong."; }
     });
-  }, err => { alert("⚠ Unable to get location. Make sure location services are enabled."); });
-}
-
-// ======= Admin Panel Functions =======
-
-const ADMIN_PASSWORD = "1234"; // change as needed
-let attendeeData = [];
-
-function showAdminLogin(){ document.getElementById('adminPanel').style.display='block'; }
-
-function loginAdmin(){
-  const pw = document.getElementById("adminPassword").value;
-  if(pw===ADMIN_PASSWORD){
-    document.getElementById('filters').style.display='block';
-    document.getElementById('adminPassword').style.display='none';
-    loadAttendees();
-  } else { alert("Wrong password!"); }
-}
-
-function loadAttendees(){
-  const dateFilter = document.getElementById("filterDate").value;
-  const idFilter = document.getElementById("filterID").value.trim();
-  const teamFilter = document.getElementById("filterTeam").value;
-
-  google.script.run.withSuccessHandler(data=>{
-    if(teamFilter) data = data.filter(row=>row[2]===teamFilter);
-    attendeeData = data;
-    renderTable(data);
-  }).getAttendees(dateFilter, idFilter);
-}
-
-function renderTable(data){
-  const tbody = document.getElementById("attendeesTable").querySelector("tbody");
-  tbody.innerHTML="";
-  data.forEach(row=>{
-    const tr = document.createElement("tr");
-    row.forEach(cell=>{
-      const td = document.createElement("td");
-      td.textContent = cell;
-      tr.appendChild(td);
-    });
-    tbody.appendChild(tr);
-  });
-}
-
-function downloadCSV(){
-  if(attendeeData.length===0){ alert("No data to download."); return; }
-  let csvContent = "data:text/csv;charset=utf-8,Timestamp,Name,Team,ID#,Device\n";
-  attendeeData.forEach(row=>{ csvContent += row.join(",") + "\n"; });
-  const encodedUri = encodeURI(csvContent);
-  const link = document.createElement("a");
-  link.setAttribute("href", encodedUri);
-  link.setAttribute("download", `MAS_Drumline_Attendance_${new Date().toISOString().slice(0,10)}.csv`);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+  }, err=>{ alert("⚠ Unable to get location. Make sure location services are enabled."); });
 }
 </script>
 
