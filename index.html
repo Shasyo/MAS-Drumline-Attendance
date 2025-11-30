@@ -54,9 +54,6 @@
     text-align: center;
   }
 
-  #status.success { color: green; }
-  #status.error { color: red; }
-
   @media (max-width: 480px) {
     body {
       padding: 15px;
@@ -101,29 +98,18 @@
 <p id="status"></p>
 
 <script>
-const API_URL = "YOUR_SCRIPT_WEB_APP_URL_HERE"; // replace with your deployed Apps Script URL
+const API_URL = "https://script.google.com/macros/s/AKfycbyrt1I0YLM2tqULhP-t8sTMy6KlpzFIwgyxDUDNM9X9Ga37mSnVK0OYxL81yQbdng7jyg/exec";
 
-// Device fingerprint (works for daily device check)
+// Generate device fingerprint
 const deviceID = btoa(navigator.userAgent + screen.width + screen.height + navigator.language);
 
 function checkIn() {
   const fullName = document.getElementById("fullname").value;
   const idNumber = document.getElementById("idNumber").value;
   const team = document.getElementById("team").value;
-  const status = document.getElementById("status");
-
-  status.textContent = "";
-  status.className = "";
 
   if (!fullName || !team || !idNumber) {
-    status.textContent = "Please fill all fields.";
-    status.className = "error";
-    return;
-  }
-
-  if (!navigator.geolocation) {
-    status.textContent = "Geolocation not supported by your browser.";
-    status.className = "error";
+    alert("Please fill all fields.");
     return;
   }
 
@@ -138,29 +124,19 @@ function checkIn() {
     .then(res => res.text())
     .then(msg => {
       if (msg === "OK") {
-        status.textContent = "✅ Check-in successful";
-        status.className = "success";
+        document.getElementById("status").innerHTML = "✅ Check-in successful";
       } else if (msg === "ID_EXISTS") {
-        status.textContent = "❌ This ID# already checked in today.";
-        status.className = "error";
+        document.getElementById("status").innerHTML = "❌ This ID# already checked in.";
       } else if (msg === "DEVICE_EXISTS") {
-        status.textContent = "❌ This device already checked in today.";
-        status.className = "error";
+        document.getElementById("status").innerHTML = "❌ This device already checked in.";
       } else if (msg === "OUT_OF_RANGE") {
-        status.textContent = "❌ You are not at the event location.";
-        status.className = "error";
+        document.getElementById("status").innerHTML = "❌ You are not at the event location.";
       } else {
-        status.textContent = "⚠ Something went wrong.";
-        status.className = "error";
+        document.getElementById("status").innerHTML = "⚠ Something went wrong.";
       }
-    }).catch(err => {
-      status.textContent = "⚠ Network error: " + err;
-      status.className = "error";
     });
-
   }, err => {
-    status.textContent = "⚠ Unable to get location. Make sure location services are enabled.";
-    status.className = "error";
+    alert("⚠ Unable to get location. Make sure location services are enabled.");
   });
 }
 </script>
