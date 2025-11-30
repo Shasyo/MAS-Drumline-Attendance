@@ -44,10 +44,6 @@
       cursor: pointer;
     }
 
-    button:hover {
-      background: #222;
-    }
-
     .msg {
       margin-top: 15px;
       padding: 12px;
@@ -59,17 +55,48 @@
 
     .success { background: #c8e6c9; color: #2e7d32; }
     .error { background: #ffcdd2; color: #c62828; }
+
+    /* Loading Overlay */
+    #loading {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+    }
+
+    .spinner {
+      width: 50px;
+      height: 50px;
+      border: 5px solid #fff;
+      border-top: 5px solid #000;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
   </style>
 </head>
 
 <body>
 
+<div id="loading">
+  <div class="spinner"></div>
+</div>
+
 <div class="container">
   <h2>MAS Drumline<br>Attendance Check-In</h2>
 
-  <input id="fullName" type="text" placeholder="Full Name" required>
-  
-  <select id="team" required>
+  <input id="fullName" type="text" placeholder="Full Name">
+
+  <select id="team">
     <option value="">Select Team</option>
     <option>Ashbal</option>
     <option>Zahrat</option>
@@ -78,7 +105,7 @@
     <option>Morasha7 Gawala</option>
   </select>
 
-  <input id="idNumber" type="text" placeholder="ID#" required>
+  <input id="idNumber" type="text" placeholder="ID#">
 
   <input id="deviceID" type="hidden">
 
@@ -91,7 +118,10 @@
 
   const API_URL = "https://script.google.com/macros/s/AKfycbyrt1I0YLM2tqULhP-t8sTMy6KlpzFIwgyxDUDNM9X9Ga37mSnVK0OYxL81yQbdng7jyg/exec";
 
-  // Generate persistent deviceID (stored locally forever)
+  function toggleLoading(show) {
+    document.getElementById("loading").style.display = show ? "flex" : "none";
+  }
+
   function generateDeviceID() {
     let id = localStorage.getItem("deviceID");
     if (!id) {
@@ -113,34 +143,29 @@
       return;
     }
 
-    if (!navigator.geolocation) {
-      showMessage("GPS is not supported on this device.", true);
-      return;
-    }
+    toggleLoading(true);
 
     navigator.geolocation.getCurrentPosition(position => {
       const lat = position.coords.latitude;
       const lng = position.coords.longitude;
 
-      const payload = {
-        fullName,
-        team,
-        idNumber,
-        deviceID,
-        lat,
-        lng
-      };
-
       fetch(API_URL, {
         method: "POST",
-        body: JSON.stringify(payload)
+        body: JSON.stringify({ fullName, team, idNumber, deviceID, lat, lng })
       })
       .then(res => res.text())
-      .then(response => handleResponse(response))
-      .catch(() => showMessage("Network error. Please try again.", true));
+      .then(res => {
+        toggleLoading(false);
+        handleResponse(res);
+      })
+      .catch(() => {
+        toggleLoading(false);
+        showMessage("Network error. Please try again.", true);
+      });
 
     }, () => {
-      showMessage("GPS permission denied. Enable location and try again.", true);
+      toggleLoading(false);
+      showMessage("Enable GPS and try again.", true);
     });
   }
 
@@ -148,16 +173,15 @@
     if (res === "OK") return showMessage("Check-in successful!", false);
     if (res === "ID_EXISTS") return showMessage("This ID already checked in today.", true);
     if (res === "DEVICE_EXISTS") return showMessage("This device already checked in today.", true);
-    if (res === "OUT_OF_RANGE") return showMessage("You are not at the event location (30m required).", true);
-
+    if (res === "OUT_OF_RANGE") return showMessage("You must be within 30 meters of the event.", true);
     return showMessage("Unknown error: " + res, true);
   }
 
-  function showMessage(text, isError) {
+  function showMessage(text, err) {
     const box = document.getElementById("message");
     box.style.display = "block";
-    box.className = "msg " + (isError ? "error" : "success");
     box.textContent = text;
+    box.className = "msg " + (err ? "error" : "success");
   }
 
 </script>
