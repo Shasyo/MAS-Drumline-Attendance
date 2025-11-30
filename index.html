@@ -1,87 +1,75 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MAS Drumline Attendance</title>
-<style>
-  body {
-    font-family: Arial, sans-serif;
-    padding: 20px;
-    margin: 0;
-    background: #f5f5f5;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MAS Drumline Attendance</title>
 
-  h2 {
-    text-align: center;
-    margin-bottom: 20px;
-  }
-
-  .input-group {
-    width: 100%;
-    max-width: 400px;
-    margin-bottom: 15px;
-  }
-
-  input, select, button {
-    font-size: 18px;
-    width: 100%;
-    padding: 12px 10px;
-    margin-top: 5px;
-    border-radius: 8px;
-    border: 1px solid #ccc;
-    box-sizing: border-box;
-  }
-
-  button {
-    background: #000;
-    color: white;
-    border: none;
-    cursor: pointer;
-    margin-top: 10px;
-  }
-
-  button:active {
-    background: #333;
-  }
-
-  #status {
-    margin-top: 20px;
-    font-size: 18px;
-    text-align: center;
-  }
-
-  @media (max-width: 480px) {
+  <style>
     body {
-      padding: 15px;
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      padding: 20px;
+    }
+
+    .container {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      max-width: 420px;
+      margin: auto;
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 22px;
+      line-height: 1.4;
     }
 
     input, select, button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
       font-size: 16px;
-      padding: 10px 8px;
     }
 
-    #status {
-      font-size: 16px;
+    button {
+      background: #000;
+      color: white;
+      border: none;
+      font-weight: bold;
+      cursor: pointer;
     }
-  }
-</style>
+
+    button:hover {
+      background: #222;
+    }
+
+    .msg {
+      margin-top: 15px;
+      padding: 12px;
+      border-radius: 8px;
+      display: none;
+      text-align: center;
+      font-weight: bold;
+    }
+
+    .success { background: #c8e6c9; color: #2e7d32; }
+    .error { background: #ffcdd2; color: #c62828; }
+  </style>
 </head>
+
 <body>
 
-<h2>MAS Drumline Attendance</h2>
+<div class="container">
+  <h2>MAS Drumline<br>Attendance Check-In</h2>
 
-<div class="input-group">
-  <input id="fullname" placeholder="Full Name" />
-</div>
-<div class="input-group">
-  <input id="idNumber" placeholder="ID#" />
-</div>
-<div class="input-group">
-  <select id="team">
+  <input id="fullName" type="text" placeholder="Full Name" required>
+  
+  <select id="team" required>
     <option value="">Select Team</option>
     <option>Ashbal</option>
     <option>Zahrat</option>
@@ -89,56 +77,89 @@
     <option>Kashafeen</option>
     <option>Morasha7 Gawala</option>
   </select>
-</div>
 
-<div class="input-group">
-  <button onclick="checkIn()">Check In</button>
-</div>
+  <input id="idNumber" type="text" placeholder="ID#" required>
 
-<p id="status"></p>
+  <input id="deviceID" type="hidden">
+
+  <button onclick="submitAttendance()">Check In</button>
+
+  <div id="message" class="msg"></div>
+</div>
 
 <script>
-const API_URL = "https://script.google.com/macros/s/AKfycbyrt1I0YLM2tqULhP-t8sTMy6KlpzFIwgyxDUDNM9X9Ga37mSnVK0OYxL81yQbdng7jyg/exec";
 
-// Generate device fingerprint
-const deviceID = btoa(navigator.userAgent + screen.width + screen.height + navigator.language);
+  const API_URL = "https://script.google.com/macros/s/AKfycbyrt1I0YLM2tqULhP-t8sTMy6KlpzFIwgyxDUDNM9X9Ga37mSnVK0OYxL81yQbdng7jyg/exec";
 
-function checkIn() {
-  const fullName = document.getElementById("fullname").value;
-  const idNumber = document.getElementById("idNumber").value;
-  const team = document.getElementById("team").value;
+  // Generate persistent deviceID (stored locally forever)
+  function generateDeviceID() {
+    let id = localStorage.getItem("deviceID");
+    if (!id) {
+      id = "DEV-" + Math.random().toString(36).substring(2, 12);
+      localStorage.setItem("deviceID", id);
+    }
+    document.getElementById("deviceID").value = id;
+  }
+  generateDeviceID();
 
-  if (!fullName || !team || !idNumber) {
-    alert("Please fill all fields.");
-    return;
+  function submitAttendance() {
+    const fullName = document.getElementById("fullName").value.trim();
+    const team = document.getElementById("team").value;
+    const idNumber = document.getElementById("idNumber").value.trim();
+    const deviceID = document.getElementById("deviceID").value;
+
+    if (!fullName || !team || !idNumber) {
+      showMessage("Please fill all fields.", true);
+      return;
+    }
+
+    if (!navigator.geolocation) {
+      showMessage("GPS is not supported on this device.", true);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(position => {
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+
+      const payload = {
+        fullName,
+        team,
+        idNumber,
+        deviceID,
+        lat,
+        lng
+      };
+
+      fetch(API_URL, {
+        method: "POST",
+        body: JSON.stringify(payload)
+      })
+      .then(res => res.text())
+      .then(response => handleResponse(response))
+      .catch(() => showMessage("Network error. Please try again.", true));
+
+    }, () => {
+      showMessage("GPS permission denied. Enable location and try again.", true);
+    });
   }
 
-  navigator.geolocation.getCurrentPosition(pos => {
-    const lat = pos.coords.latitude;
-    const lng = pos.coords.longitude;
+  function handleResponse(res) {
+    if (res === "OK") return showMessage("Check-in successful!", false);
+    if (res === "ID_EXISTS") return showMessage("This ID already checked in today.", true);
+    if (res === "DEVICE_EXISTS") return showMessage("This device already checked in today.", true);
+    if (res === "OUT_OF_RANGE") return showMessage("You are not at the event location (30m required).", true);
 
-    fetch(API_URL, {
-      method: "POST",
-      body: JSON.stringify({ fullName, team, idNumber, deviceID, lat, lng })
-    })
-    .then(res => res.text())
-    .then(msg => {
-      if (msg === "OK") {
-        document.getElementById("status").innerHTML = "✅ Check-in successful";
-      } else if (msg === "ID_EXISTS") {
-        document.getElementById("status").innerHTML = "❌ This ID# already checked in.";
-      } else if (msg === "DEVICE_EXISTS") {
-        document.getElementById("status").innerHTML = "❌ This device already checked in.";
-      } else if (msg === "OUT_OF_RANGE") {
-        document.getElementById("status").innerHTML = "❌ You are not at the event location.";
-      } else {
-        document.getElementById("status").innerHTML = "⚠ Something went wrong.";
-      }
-    });
-  }, err => {
-    alert("⚠ Unable to get location. Make sure location services are enabled.");
-  });
-}
+    return showMessage("Unknown error: " + res, true);
+  }
+
+  function showMessage(text, isError) {
+    const box = document.getElementById("message");
+    box.style.display = "block";
+    box.className = "msg " + (isError ? "error" : "success");
+    box.textContent = text;
+  }
+
 </script>
 
 </body>
