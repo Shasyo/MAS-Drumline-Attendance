@@ -43,8 +43,8 @@ let deviceID = localStorage.getItem("deviceID");
 if(!deviceID) { deviceID = crypto.randomUUID(); localStorage.setItem("deviceID", deviceID); }
 
 function checkIn() {
-  const fullName = document.getElementById("fullname").value;
-  const idNumber = document.getElementById("idNumber").value; // optional
+  const fullName = document.getElementById("fullname").value.trim();
+  const idNumber = document.getElementById("idNumber").value.trim(); // optional
   const team = document.getElementById("team").value;
 
   if (!fullName || !team) {  // ID# is optional
