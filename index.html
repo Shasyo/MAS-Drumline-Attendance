@@ -20,7 +20,8 @@
 <h2>MAS Drumline Attendance</h2>
 
 <div class="input-group"><input id="fullname" placeholder="Full Name" /></div>
-<div class="input-group"><input id="idNumber" placeholder="ID#" /></div>
+<div class="input-group"><input id="idNumber" placeholder="ID# (optional)" /></div>
+
 <div class="input-group">
   <select id="team">
     <option value="">Select Team</option>
@@ -36,36 +37,51 @@
 <p id="status"></p>
 
 <script>
+
+// FINAL API URL
 const API_URL = "https://script.google.com/macros/s/AKfycbyrt1I0YLM2tqULhP-t8sTMy6KlpzFIwgyxDUDNM9X9Ga37mSnVK0OYxL81yQbdng7jyg/exec";
 
-// Persistent deviceID
+// Persistent deviceID (never changes on the same phone)
 let deviceID = localStorage.getItem("deviceID");
 if (!deviceID) { deviceID = crypto.randomUUID(); localStorage.setItem("deviceID", deviceID); }
 
 function checkIn() {
   const fullName = document.getElementById("fullname").value;
-  const idNumber = document.getElementById("idNumber").value;
+  const idNumber = document.getElementById("idNumber").value || ""; // optional
   const team = document.getElementById("team").value;
 
-  if(!fullName || !team || !idNumber){ alert("Please fill all fields."); return; }
+  if (!fullName || !team) {
+    alert("Please fill Full Name and Team.");
+    return;
+  }
 
-  navigator.geolocation.getCurrentPosition(pos=>{
-    const lat=pos.coords.latitude;
-    const lng=pos.coords.longitude;
+  navigator.geolocation.getCurrentPosition(pos => {
+    const lat = pos.coords.latitude;
+    const lng = pos.coords.longitude;
 
-    fetch(API_URL,{ method:"POST", body:JSON.stringify({ fullName, team, idNumber, deviceID, lat, lng })})
-    .then(res=>res.text())
-    .then(msg=>{
-      if(msg==="OK"){ document.getElementById("status").innerHTML="✅ Check-in successful"; }
-      else if(msg==="ID_EXISTS"){ document.getElementById("status").innerHTML="❌ This ID# already checked in today."; }
-      else if(msg==="DEVICE_EXISTS"){ document.getElementById("status").innerHTML="❌ This device already checked in today."; }
-      else if(msg==="OUT_OF_RANGE"){ document.getElementById("status").innerHTML="❌ You are not at the event location."; }
-      else{ document.getElementById("status").innerHTML="⚠ Something went wrong."; }
+    fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify({ fullName, team, idNumber, deviceID, lat, lng })
+    })
+    .then(res => res.text())
+    .then(msg => {
+      if (msg === "OK") {
+        document.getElementById("status").innerHTML = "✅ Check-in successful";
+      } else if (msg === "ID_EXISTS") {
+        document.getElementById("status").innerHTML = "❌ This ID# already checked in today.";
+      } else if (msg === "OUT_OF_RANGE") {
+        document.getElementById("status").innerHTML = "❌ You are not at the event location.";
+      } else {
+        document.getElementById("status").innerHTML = "⚠ Something went wrong.";
+      }
     });
-  }, err=>{ alert("⚠ Unable to get location. Make sure location services are enabled."); });
+
+  }, err => {
+    alert("⚠ Unable to get location. Make sure location services are enabled.");
+  });
 }
+
 </script>
 
 </body>
 </html>
-
