@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MAS Drumline Attendance</title>
 <style>
-  body { font-family: Arial, sans-serif; padding:20px; margin:0; background:#f5f5f5; display:flex; flex-direction:column; align-items:center;}
+  body { font-family: Arial, sans-serif; padding: 20px; margin:0; background:#f5f5f5; display:flex; flex-direction:column; align-items:center;}
   h2 { text-align:center; margin-bottom:20px; }
   .input-group { width:100%; max-width:400px; margin-bottom:15px; }
   input, select, button { font-size:18px; width:100%; padding:12px 10px; margin-top:5px; border-radius:8px; border:1px solid #ccc; box-sizing:border-box;}
@@ -20,7 +20,7 @@
 <h2>MAS Drumline Attendance</h2>
 
 <div class="input-group"><input id="fullname" placeholder="Full Name" /></div>
-<div class="input-group"><input id="idNumber" placeholder="ID# (optional)" /></div>
+<div class="input-group"><input id="idNumber" placeholder="ID#" /></div>
 <div class="input-group">
   <select id="team">
     <option value="">Select Team</option>
@@ -30,7 +30,7 @@
     <option>Kashafeen</option>
     <option>Morasha7 Gawala</option>
     <option>Helpers</option>
-    <option>Leaders</option>
+    <option>Leader</option>
   </select>
 </div>
 
@@ -38,44 +38,35 @@
 <p id="status"></p>
 
 <script>
-const API_URL = "https://script.google.com/macros/s/AKfycbwIdtg1cR_bld375dGRwLsldB8MWWk_998Jdd7ipVALdp7pvlQZRpD1ldhzCQeNQQBPfw/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbyrt1I0YLM2tqULhP-t8sTMy6KlpzFIwgyxDUDNM9X9Ga37mSnVK0OYxL81yQbdng7jyg/exec";
 
 // Persistent deviceID
 let deviceID = localStorage.getItem("deviceID");
-if(!deviceID) { deviceID = crypto.randomUUID(); localStorage.setItem("deviceID", deviceID); }
+if (!deviceID) { deviceID = crypto.randomUUID(); localStorage.setItem("deviceID", deviceID); }
 
 function checkIn() {
-  const fullName = document.getElementById("fullname").value.trim();
-  const idNumber = document.getElementById("idNumber").value.trim(); // optional
+  const fullName = document.getElementById("fullname").value;
+  const idNumber = document.getElementById("idNumber").value;
   const team = document.getElementById("team").value;
 
-  if (!fullName || !team) {  // ID# is optional
-    alert("Please fill all required fields.");
-    return;
-  }
+  if(!fullName || !team || !idNumber){ alert("Please fill all fields."); return; }
 
-  navigator.geolocation.getCurrentPosition(pos => {
-    const lat = pos.coords.latitude;
-    const lng = pos.coords.longitude;
+  navigator.geolocation.getCurrentPosition(pos=>{
+    const lat=pos.coords.latitude;
+    const lng=pos.coords.longitude;
 
-    fetch(API_URL, {
-      method: "POST",
-      body: JSON.stringify({ fullName, team, idNumber, deviceID, lat, lng })
-    })
-    .then(res => res.text())
-    .then(msg => {
-      if(msg === "OK") document.getElementById("status").innerHTML = "✅ Check-in successful";
-      else if(msg === "ID_EXISTS") document.getElementById("status").innerHTML = "❌ This ID# already checked in today.";
-      else if(msg === "OUT_OF_RANGE") document.getElementById("status").innerHTML = "❌ You are not at the event location.";
-      else document.getElementById("status").innerHTML = "⚠ Something went wrong.";
+    fetch(API_URL,{ method:"POST", body:JSON.stringify({ fullName, team, idNumber, deviceID, lat, lng })})
+    .then(res=>res.text())
+    .then(msg=>{
+      if(msg==="OK"){ document.getElementById("status").innerHTML="✅ Check-in successful"; }
+      else if(msg==="ID_EXISTS"){ document.getElementById("status").innerHTML="❌ This ID# already checked in today."; }
+      else if(msg==="DEVICE_EXISTS"){ document.getElementById("status").innerHTML="❌ This device already checked in today."; }
+      else if(msg==="OUT_OF_RANGE"){ document.getElementById("status").innerHTML="❌ You are not at the event location."; }
+      else{ document.getElementById("status").innerHTML="⚠ Something went wrong."; }
     });
-  }, err => {
-    alert("⚠ Unable to get location. Make sure location services are enabled.");
-  });
+  }, err=>{ alert("⚠ Unable to get location. Make sure location services are enabled."); });
 }
 </script>
 
 </body>
 </html>
-
-
